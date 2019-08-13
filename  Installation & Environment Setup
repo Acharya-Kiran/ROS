@@ -1,0 +1,48 @@
+------------------------------------------------------------
+   Installation
+------------------------------------------------------------
+http://wiki.ros.org/ROS/Installation
+
+- ROS has various Distributions
+- Recommended are the ones that have LTS(Long Time Support) such as Indigo, Kinetic & Melodic
+- These distributions can be installed on platforms like Ubuntu, Debian, MacOS, etc. but the Distributions works on specific version of the Platform.
+  ex. Kinetic works on Ubuntu 15.10 and 16.04
+
+http://wiki.ros.org/kinetic/Installation
+
+
+- Its recommended to install a Ubuntu virtual-machine rather than have a Ubuntu OS in your physical machine, coz ROS can create issues that may require you to re-install the OS.
+  ex. for a Windows machine you can install a VMware Workstation Pro and have a virtual machine. Its recommended to have a backup of your virtual machine.
+
+
+
+------------------------------------------------------------
+   Environment Setup
+------------------------------------------------------------
+- After following the installation steps i.e from Debian package index update to installing all the dependencies.
+- You need to source the setup.bash of the ROS workspace inorder to enable ROS.
+- Inorder to do it permanently,
+
+	$ gedit .bashrc //open your bashrc file from the ``home directory``
+	// add the below line in the file so that you need not do source everytime you open a new terminal
+
+	source /opt/ros/kinetic/setup.bash
+	// you'll have to just do -> source .bashrc
+
+	-- .bashrc is the file i.e. executed by default everytime we open a new terminal and is present in the `home` directory.
+
+- Its necessary to have a workspace, that'll have packages to run ROS.
+ex.
+	//open terminal in home
+	$ mkdir -p ~/catkin_ws/src //----src is the folder where you put your projects
+	$ cd catkin_ws
+	$ catkin_make //compile your workspace
+
+	//to make a workspace as our default workspace, add the below line in the .bashrc file
+	source /home/agv/catkin_ws/devel/setup.bash
+
+
+-------------------------------------
+ IDE setup
+-------------------------------------
+ http://cs460.coins-lab.org/index.php?title=Eclipse

@@ -1,0 +1,80 @@
+------------------------------------------------------------------------------------------------------------------------
+  ROS Workspace & ROS Package
+------------------------------------------------------------------------------------------------------------------------
+// Setting up ROS projects
+
+- Every Workspace has a 'setup.bash' file which must be executed inorder to enable the workspace. the file is executed using the 'source' command.
+
+- Create a workspace for catkin // In a nutshell, catkin is just a compilation framework used by the ROS environment.
+	//home directory
+	$ mkdir -p ~/catkin_ws/src  //src folder will contain the source files and other packages/project that'll be created later on. `-p` indicates creating the parent directory
+	$ cd catkin_ws/
+	$ catkin_make   //Compile the workspace
+
+	//After compiling, `build` and `devel` folders are created inside the workspace. 
+	//The `build` contains the compiled files.
+	//The `devel` contains the 'setup.bash' file which has to be executed using 'source' command to enable workspace.
+
+- ROS project is actually called a package, which is defined inside a workspace and created inside the `src` folder of the workspace.
+	$ cd catkin_ws/src/
+	$ catkin_create_pkg ros_basic_tutorials std_msgs rospy roscpp
+				package_name    dependencies(libraries the project/package depends on) ---
+
+	// multiple dependencies can be mentioned, but we can later manually add the dependencies on the project as we might not be able to preassume all the dependencies.
+	//---To enable the package you'll have to compile the workspace.
+
+	//`catkin_create_pkg` will create `package.xml` and `CMakelists.txt` inside the package folder.
+
+	// package.xml
+		-we can define the license of our package 
+		-its used to describe the package and define 2 types of dependencies i.e. one needed to build the package and other needed to execute the package.
+
+	//CMakelists.txt
+		-Its the input file to the CMake build system for building software packages.
+		-It describes how to build the code and where to install it.
+
+	$ cd ..
+	$ catkin_make
+
+------------------------------------------------------------------------------------------------------------------------
+  Setup ROS project of the course using GitHub
+------------------------------------------------------------------------------------------------------------------------
+	$ sudo apt-get install git //install git
+	$ cd catkin_ws/src
+	$ git clone link_to_the_repo
+	$ cd ..
+	$ catkin_make
+
+
+------------------------------------------------------------------------------------------------------------------------
+  ROS Master Node
+------------------------------------------------------------------------------------------------------------------------
+	$ roscore  //Its the main node in ROS that ensures the communication between ros nodes.
+	
+	`/rosout` is the only node that runs by default after `roscore`
+	`/rosout, /rosout_agg` are the only topics similarly
+
+	#To be ale to work with ROS nodes, we need to run `roscore` as the main node.
+
+
+
+------------------------------------------------------------------------------------------------------------------------
+  ROS Topics, Nodes and Messages
+------------------------------------------------------------------------------------------------------------------------
+	$ rosnode list   #-will list all active nodes
+	$ rostopic list  #-will list all active topics
+
+	$ rosnode info node_name    #-will give all info regarding the node
+	$ rostopic info topic_name  #-will give all info regarding the topic
+
+	$ rosmsg show geometry_msgs/Twist   #-will give contents of the message
+	#--- In ROS we have several nodes, and these nodes communicate with each other by exchanging messages via Publisher & Subscriber topics.
+
+	$ rostopic echo topic_name  #--will display the values a topic i.e. subscribing or publishing
+
+	$ rosrun rqt_graph rqt_graph #--this will display all the active nodes and the communication between them via topics in a form of a graph. 
+
+	#-- rosrun pkg_name node_name
+	#-- you can type `rosrun pkg_name` and then click double-tab inorder to see the possible nodes to run.
+
+

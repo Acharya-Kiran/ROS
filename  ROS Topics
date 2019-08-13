@@ -1,0 +1,260 @@
+-------------------------------------------------------------------------------
+  ROS Topics Overview
+-------------------------------------------------------------------------------
+#-- most important features of ROS as they allow asynchronous communication between publishers and subscribers.
+#-- Allows to exchange messages between different nodes in ROS ecosystem.
+
+Publisher
+============
+- Nodes that produce information
+
+Subscriber
+============
+- Nodes that consume information
+
+#-- Communication channel between a Publisher and Subscriber is called a `Topic`.
+#-- Topic allows 1:1, 1:N, N:1, N:N Publisher:Subscriber communication depending on the purpose.
+
+#-- In ROS we have certain nodes that act as Publishers and some that act as Subscribers, and they communicate between each other using a particular topic,
+    so messages that will be exchanged between a publisher and subscriber will be exchanged over certain topic and will use certain message format.
+
+
+-------------------------------------------------------------------------------
+  ** Communication between a Publisher & Subscriber
+-------------------------------------------------------------------------------
+- The first thing is to run the Master Node which is responsible for identifying all the different nodes and topics.
+- Whenever a new node is run, it registers itself with the Masternode with all the info regarding the topics it may publish and subscribe, its address, message types used, its name.
+
+1. Run the Master ROS Node
+
+	$ roscore
+   #--It starts a new ROS network i.e. a XMLRPC(Remote Procedural Calls):Server located at `http://ROS_MASTER_URI:11311`.
+   #--XML-RPC permits programs to make function or procedure calls across a network. XML-RPC uses the HTTP protocol to pass information from a client computer to a server computer.
+   #--XML-RPC is among the simplest and most foolproof web service approaches that makes it easy for computers to call procedures on other computers
+
+'''
+Note :
+	XML-RPC is a Remote Procedure Call method, a type of Internet Protocol that uses XML passed via HTTP as a transport. With it, a client can call methods with parameters on a remote server (the 	server is named by a URI) and get back structured data.
+
+	xmlrpc is a package that collects server and client modules implementing XML-RPC. The modules are:
+		1. xmlrpc.client
+		2. xmlrpc.server
+'''
+
+2. & 3. Running the Subscriber/Publisher
+
+	$ rosrun pkg_name node_name
+	$ roslaunch pkg_name node_name
+   #--When a new node is run, it acts as a XMLRPC:Client located at `http://ROS_HOSTNAME:some_port_number` (address)
+   #--It registers itself with the Master Node to join the network with the following info :- /node_name, /topic_name i.e. the topics its publishing and subscribing, message_types included in topics and  
+      the node address.
+
+   #--When multiple nodes registers with the Master Node, It has the global information about the different nodes and their types (Publisher/Subscriber) which will help it figure out the topic_name 
+      i.e. for example required by node-2, is published by some other node-1.
+
+4. Provide Publisher info to Subscriber
+   ##--The Master node then sends the publisher node-1 info to Subscriber node-2. 
+
+
+5. Establish Connection Request
+   #--Node-2 after receiving this information will send a 'connection-request' to Node-1 using the 'TCPROS' protocol,
+
+6. Connection Response
+   #--Node-1 will then send a response to accept the connection.
+
+7. TCPROS Connection
+   =================
+   #-- The subscriber node Node-2 creates a Client for the publisher node (Server in this case) Node-1 using TCPROS and connects to the publisher node. At this point the communication between nodes uses   
+       TCP/IP based protocol called TCPROS. 
+
+8. Message Transmission
+   #--Once the connection is fully established then Node-1 starts sending the messages over a common Topic at regular time intervals depending on the frequency.
+   #-- The Subscriber Node-2 will have a 'callback function' which will be executed whenever Node-2 receives a new message and perform the required processing mentioned in callback fn.
+
+
+-------------------------------------------------------------------------------
+  Tips to write,
+-------------------------------------------------------------------------------
+- Publisher
+	1. Determine 'name' of the topic to publish
+	2. Determine the 'type' of messages that the topic will publish.
+	3. Determine the 'frequency' of topic publication (messages per second)
+	4. Create a publisher object with params chosen
+	5. Keep publishing the topic message at the selected frequency. #-inside a whie loop
+
+- Subscriber
+	1. Identify the 'name' for the topic to listen to
+	2. Identify the 'type' of messages to be received.
+	3. Define a callback function that will be automatically executed when a new message is received on the topic.
+	4. Start listening for topic messages.
+	5. Spin to listen forever (in C++)
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+             ROS Publisher & Subscriber in C++
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+These files are inside a `src` folder of a `package`, which is inside a src folder of a `workspace`.
+
+=============================== Publisher  : talker.cpp =================================================================
+
+#include "ros/ros.h"              //include ROS library
+#include "std_msgs/String.h"      //msg type used in a topic
+				  //------- we need to make sure that `std_msgs` is present in ``CMakelists.txt`` in find_package(catkin REQUIRED COMPONENTS .. std_msgs ..) and in specifying dependency in
+				  //------- catkin_package( .. CATKIN_DEPENDS ..std_msgs.. ) and also in 
+				  //------- ``package.xml``, here we need to make sure `std_msgs` is present while both  building -> "<build_depend>std_msgs</build_depend>" and 
+				  //------- running -> "<run_depend>std_msgs</run_depend>" the dependency.
+				  //----*** these steps should be performed when you have some dependency in your project, which was not mentioned while creating a package inside which your project 
+ 				  //------- resides.
+#include <sstream>
+
+int main(int argc, char **argv)  //here ros is a namespace :: the classes
+{
+	//Initiate a ROS node named "talker".
+	ros::init(argc,argv,"talker");
+
+	//create a node handle : its a reference assigned to a new node
+	ros::NodeHandle n;
+
+	//create a publisher with a topic "chatter" that will send a String message.
+	//----** this is the step where 'talker' node registers itself with the master.
+	ros::Publisher chatter_publisher = n.advertise<std_msgs::String>("chatter",1000) // chatter_publisher is the object that'll be used to publish the msg. 
+											 // 1000 is the buffer size, i.e. number of messages that can be accumulated
+
+	//Rate is a class used to define frequency for a loop or define a delay.
+	ros::Rate loop_rate(1.0); //1 message per second
+
+	int count = 0;
+	while(ros::ok())  //keep spinning loop until user presses Ctrl+C
+	{
+		//create a new String ROS message
+		std_msgs::String msg;
+		
+		//create a string for data
+		std::stringstream ss;            // std namespace
+		ss << "hello world" << count;
+		
+		//assign the string data to ROS message data field
+		msg.data = ss.str();
+
+		//print content of message in the terminal 
+		ROS_INFO("[Talker] I publisher %s \n",msg.data.c_str());
+
+		//publish the message
+		chatter_publisher.publish(msg)  //this will put the messages in the buffer
+
+		ros::spinOnce(); //Need to call this fn often to allow ROS to process incoming messages from buffer and publish effectively.
+
+		loop_rate.sleep(); //to enforce loop rate
+		++count;
+	}
+	return 0;
+
+}
+
+//to be able to run this file we need to declare this file as an executable in `CMakelists.txt` of the package it is contained in, by adding following lines in `CMakelists.txt`.
+
+	add_executable(talker src/talker.cpp)
+	target_link_libraries(talker ${catkin_LIBRARIES})
+	add_dependencies(talker [dependency_files])  //optional in this case
+
+//Then you need to compile the workspace.
+	$ catkin_make
+
+//then run the node
+	$ rosrun pkg_name talker
+
+
+
+
+======================================== Subscriber : listener.cpp =========================================================
+
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+
+void chatterCallback(const std_msgs::String::ConstPtr &msg)
+{
+	ROS_INFO("[Listener] I heard: [%s], msg->data.c_str()");
+}
+
+int main(int argc, char **argv)
+{
+	ros:init(argc,argv,"listener");
+	ros::NodeHandle node;
+	
+	ros::Subscriber sub = node.subscribe("chatter", 1000, chatterCallback);  //chatterCallback is a fn that'll be auto executed each time a message is received in the topic.
+
+	ros::spin(); //this will make an endless loop for processing the messages received in the buffer.
+	return 0;
+}
+
+//to be able to run this file we need to declare this file as an executable in `CMakelists.txt` of the package it is contained in, by adding following lines in `CMakelists.txt`.
+
+	add_executable(listener src/listener.cpp)
+	target_link_libraries(listener ${catkin_LIBRARIES})
+	add_dependencies(listener [dependency_files])  //optional in this case
+
+//Then you need to compile the workspace.
+	$ catkin_make
+
+//then run the node inside workspace
+	$ rosrun pkg_name talker
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+                   ROS Publisher & Subscriber in Python
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+** These python files are usually inside a `scripts` folder inside a package.
+
+======================================== Publisher : talker.py ============================================================
+	import rospy
+	from std_msgs.msg import String
+
+	def talker():
+		rospy.init_node('talker', anonymous=True)  //anonymous=True indicates that the rospy will choose a unique name for this node so that multiple Publisher/Subscriber can run simultaneously.
+		pub = rospy.Publisher('chatter', String, queue_size=10)
+		rate = rospy.Rate(1)
+		
+		while not rospy.is_shutdown():  //keep publishing until Ctrl+C is pressed
+			hello_str = "hello world %s" % rospy.get_time()
+			rospy.loginfo(hello_str)
+			pub.publish(hello_str)
+			rate.sleep()
+
+	if __name__ == '__main__':
+		try:
+			talker()
+		except rospy.ROSInterruptException:
+			pass
+		
+// Inorder to make this node executable, inside `pakage/scripts/` we have to make this file executable,
+	$ sudo chmod +x talker.py
+
+//then run the node inside workspace
+	$ rosrun pkg_name talker.py
+
+======================================== Subscriber : listener.py =========================================================
+
+	import rospy
+	from std_msgs.msg import String
+
+	def callback(msg):
+		rospy.loginf(rospy.get_caler_id() + "I heard %s", msg.data)
+
+	def listener():
+		rospy.init_node('listener', anonymous=True)
+		rospy.Subscriber('chatter', String, callback)
+		rospy.spin()
+
+	if __name__ == '__main__':
+		listener()
+		
+// Inorder to make this node executable, inside `pakage/scripts/` we have to make this file executable,
+	$ sudo chmod +x listener.py
+
+//then run the node inside workspace
+	$ rosrun pkg_name listener.py
+
