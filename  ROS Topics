@@ -1,6 +1,8 @@
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
   ROS Topics Overview
--------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
 #-- most important features of ROS as they allow asynchronous communication between publishers and subscribers.
 #-- Allows to exchange messages between different nodes in ROS ecosystem.
 
@@ -19,9 +21,11 @@ Subscriber
     so messages that will be exchanged between a publisher and subscriber will be exchanged over certain topic and will use certain message format.
 
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
   ** Communication between a Publisher & Subscriber
--------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
 - The first thing is to run the Master Node which is responsible for identifying all the different nodes and topics.
 - Whenever a new node is run, it registers itself with the Masternode with all the info regarding the topics it may publish and subscribe, its address, message types used, its name.
 
@@ -72,9 +76,11 @@ Note :
    #-- The Subscriber Node-2 will have a 'callback function' which will be executed whenever Node-2 receives a new message and perform the required processing mentioned in callback fn.
 
 
--------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
   Tips to write,
--------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
 - Publisher
 	1. Determine 'name' of the topic to publish
 	2. Determine the 'type' of messages that the topic will publish.
@@ -91,7 +97,9 @@ Note :
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
+
              ROS Publisher & Subscriber in C++
+
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -175,7 +183,7 @@ int main(int argc, char **argv)  //here ros is a namespace :: the classes
 
 void chatterCallback(const std_msgs::String::ConstPtr &msg)
 {
-	ROS_INFO("[Listener] I heard: [%s], msg->data.c_str()");
+	ROS_INFO("[Listener] I heard: [%s]", msg->data.c_str());
 }
 
 int main(int argc, char **argv)
@@ -204,7 +212,9 @@ int main(int argc, char **argv)
 
 
 --------------------------------------------------------------------------------------------------------------------------------------------------
+
                    ROS Publisher & Subscriber in Python
+
 --------------------------------------------------------------------------------------------------------------------------------------------------
 
 ** These python files are usually inside a `scripts` folder inside a package.
@@ -215,7 +225,7 @@ int main(int argc, char **argv)
 
 	def talker():
 		rospy.init_node('talker', anonymous=True)  //anonymous=True indicates that the rospy will choose a unique name for this node so that multiple Publisher/Subscriber can run simultaneously.
-		pub = rospy.Publisher('chatter', String, queue_size=10)
+		pub = rospy.Publisher('chatter', String, queue_size=10)   // *---- here rospy itself is a node handler ----
 		rate = rospy.Rate(1)
 		
 		while not rospy.is_shutdown():  //keep publishing until Ctrl+C is pressed
@@ -257,4 +267,289 @@ int main(int argc, char **argv)
 
 //then run the node inside workspace
 	$ rosrun pkg_name listener.py
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	Assignment to make the Robot move and display its position, on a turtlesim simulator
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	$ roscore
+
+	// in a new tab (Ctrl+Shift+t)
+	$ rosrun turtlesim turtlesim_node
+
+	// check for topics in a new tab
+	$ rostopic list
+		/rosout
+		/rosout_agg
+		/turtle1/cmd_vel
+		/turtle1/color_sensor
+		/turtle1/pose
+
+	// required topics are `/turtle1/cmd_vel` and `/turtle1/pose`
+	$ rostopic info /turtle1/cmd_vel
+		Type: geometry_msgs/Twist
+
+		Publishers: None
+
+		Subscribers: 
+		 * /turtlesim (http://AT:44189/)
+
+	
+	$ rostopic info /turtle1/pose
+		Type: turtlesim/Pose
+		
+		Publishers: 
+		 * /turtlesim (http://AT:44189/)
+
+		Subscribers: None
+
+	
+	//Identify the params to pass, i.e. the content of the messages
+	$ rosmsg show turtlesim/Pose
+		float32 x
+		float32 y
+		float32 theta
+		float32 linear_velocity
+		float32 angular_velocity
+
+	$ rosmsg show geometry_msgs/Twist
+		geometry_msgs/Vector3 linear
+		  float64 x
+		  float64 y
+		  float64 z
+		geometry_msgs/Vector3 angular
+		  float64 x
+		  float64 y
+		  float64 z
+
+	//here we can conclude that we have to create a node that publishes to `/turtle1/cmd_vel` topic and subscribes to `/turtle1/pose` topic.
+	//the message types can come useful in creating a package with depenedencies (message types) if creating a node in C++
+
+	================================ Subscriber
+
+	#!/usr/bin/env python
+	import rospy
+	from turtlesim.msg import Pose
+
+	def poseCallback(pose_message):
+		print "pose callback"
+		print ('x = %f' %pose_message.x) 
+		print ('y = %f' %pose_message.y) 
+		print ('yaw = %f' %pose_message.theta)
+
+	if __name__ == '__main__':
+		try:
+			rospy.init_node('turtlesim_motion_pose', anonymous=True)
+			rospy.Subscriber('/turtle1/pose',Pose,poseCallback)
+			rospy.spin()
+
+		except rospy.ROSInterruptException:
+			rospy.loginfo("node terminated.")
+
+	=============================== Publisher
+
+	#!/usr/bin/env python
+
+	import rospy
+	from geometry_msgs.msg import Twist
+	from turtlesim.msg import Pose
+	import math
+	import time
+	from std_srvs.srv import Empty
+
+	x=0
+	y=0
+	z=0
+	yaw=0
+
+	def poseCallback(pose_message):
+		global x
+		global y, z, yaw
+		x= pose_message.x
+		y= pose_message.y
+		yaw = pose_message.theta
+
+
+	def move(speed, distance):
+		velocity_message = Twist()
+
+		#get current location from the global variable before entering the loop 
+		x0=x
+		y0=y
+		#z0=z;
+		#yaw0=yaw;
+
+		velocity_message.liner.x = speed
+
+		distance_moved = 0.0
+		loop_rate = rospy.Rate(10) # we publish the velocity at 10 Hz (10 times a second)
+
+		velocity_publisher = rospy.Publisher('/turtle1/cmd_vel',Twist, queue_size=10)
+
+		while True :
+			rospy.loginfo("Turtlesim moves forwards")
+			velocity_publisher.publish(velocity_message)
+			loop_rate.sleep()
+			#rospy.Duration(1.0)
+			#measure the distance moved
+			distance_moved = distance_moved+abs(0.5 * math.sqrt(((x-x0) ** 2) + ((y-y0) ** 2)))
+			print distance_moved 
+
+			if not (distance_moved<distance):
+				rospy.loginfo("reached")
+				break
+			else:
+				velocity_message.liner.x = 0
+				velocity_publisher.publish(velocity_message)
+				break
+
+
+
+	if __name__ == '__main__':
+		try:
+
+			rospy.init_node('turtlesim_motion_pose', anonymous=True)
+			velocity_publisher = rospy.Publisher('/turtle1/cmd_vel',Twist, queue_size=10)
+
+			position_topic = "/turtle1/pose"
+			pose_subscriber = rospy.Subscriber(position_topic, Pose, poseCallback)
+
+
+			time.sleep(2)
+			print 'move: '
+			move (1.0, 5.0)
+			time.sleep(2)
+			print 'start reset: '
+			rospy.wait_for_service('reset')
+			reset_turtle = rospy.ServiceProxy('reset', Empty)
+			reset_turtle()
+			print 'end reset: '
+			rospy.spin()
+
+		except rospy.ROSInterruptException:
+			rospy.loginfo("node terminated.")
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+	
+	Custom ROS Messages
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+- We might have to define our own message types, if no existing message type defines the content we have to carry out in the message.
+
+// Structure of a ROS message       :  `package_name/message_type`   ex. std_msgs/String
+
+// Every ROS message has a content  :  type1 field1		     ex. string data
+				       type2 field2
+					...
+	
+//------Steps to create a new ROS Message
+
+1.  create a `msg` folder in yor package
+2.  create a message file with extension `.msg`
+3.  edit the message file by adding the elements (one per line)
+4.  Update the dependencies
+	in `package.xml`
+	in `CMakelists.txt`
+5.  compile the package using `catkin_make`
+6.  make sure the message is created, using cmd `rosmsg show`
+
+
+example :
+
+  -------------------------------           Topic			----------------------------------------
+     IoT Sensor Publisher Node        ---------------------->         		IoT Sensor Subscriber Node 
+  -------------------------------	IoTSensor Message		----------------------------------------
+
+					id
+					name
+					temperature
+					humidity
+
+
+//-------- to see the primitive data types supported by ROS Messages see, " wiki.ros.org/msg "
+
+- Create a `IoTSensor.msg` file under `msg` folder inside a package.
+- add following lines in the file,'
+	int32 id
+	string name
+	float32 temperature
+	float32 humidity
+- Update dependencies,
+
+  //-------package.xml
+	<build_depend>message_generation</build_depend>
+	<exec_depend>message_runtime<exec_depend>
+
+  //-------CMakelists.txt
+	find_package( catkin REQUIRED COMPONENTS
+			...
+		      message_generation
+	)
+
+	add_message_files(
+		FILES
+		IoTSensor.msg
+	)
+
+	generate_messages(
+		DEPENDENCIES
+		std_msgs
+		actionlib_msgs
+	)
+
+	catkin_package(
+	  ..
+	  CATKIN_DEPENDS ... message_runtime
+	  ..
+	)
+
+- compile the workspace
+	$ catkin_make
+
+
+================================================ iot_sensor_publisher.py
+
+import rospy
+from pakage_name.msg import IoTSensor   //-----------****
+import random
+
+pub = rospy.Publisher('iot_sensor_topic', IoTSensor, queue_size = 10)
+rospy.init_node('iot_sensor_publisher_node', anonymous=True)
+rate = rospy.Rate(1)
+i=0
+while not rospy.is_shutdown():
+	iot_sensor = IoTSensor()    #----------------*** create a object of msg 
+	iot_sensor.id = i
+	iot_sensor.name = 'iot_parking_'+str(i)
+	iot_sensor.temperature = 24.33 + (random.random()*2)
+	iot_sensor.humidity = 33.41 + (random.random()*2)
+	rospy.loginfo("I publish:")
+	rospy.loginfo(iot_sensor)
+	pub.publish(iot_sensor)
+	rate.sleep()
+	++i
+
+
+
+================================================ iot_sensor_subscriber.py
+
+import rospy
+from pakage_name.msg import IoTSensor
+
+def iot_sensor_callback(iot_sensor_message):
+	rospy.loginfo("new IoT data received : (%d, %s, %.2f, %.2f)",iot_sensor_message.id,iot_sensor_message.name,iot_sensor_message.temperature,iot_sensor_message.humidity)
+
+rospy.init_node('iot_sensor_publisher_node',anonymoues=True)
+rospy.Subscriber("iot_sensor_topic",IoTSensor,iot_sensor_callback)
+rospy.spin()
+
+
 
