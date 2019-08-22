@@ -1,0 +1,110 @@
+---------------------------------------------------------------------------------------------------------------------------------
+
+	ROS Network Configuration
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+- Describes how to make network configuration between a `ROS Machine` and `User Work Station`.
+// Objective : is to allow a Workstation to control a Robot remotely over a network.
+
+------ in ROS Machine : add following lines in `.bashrc` file
+
+#ROBOT MACHINE CONFIGURATION
+#The localhost IP address = IP address for the Master node
+
+export ROS_MASTER_URI=http://localhost:11311
+export ROS_HOSTNAME=172.20.5.94  #this will be the IP of the machine
+export ROS_IP=172.20.5.94 
+
+echo "ROS_HOSTNAME :"$ROS_HOSTNAME
+echo "ROS_IP :"$ROS_IP
+echo "ROS_MASTER_URI :"$ROS_MASTER_URI
+
+
+
+------ in User Workstation : add following lines in `.bashrc` file
+
+#ROBOT MACHINE CONFIGURATION
+
+export ROS_MASTER_URI=http://172.20.5.94:11311        ##-----** same as that in the ROS Machine
+export ROS_HOSTNAME=172.20.5.108  #this will be the IP of the machine
+export ROS_IP=172.20.5.108 
+
+echo "ROS_HOSTNAME :"$ROS_HOSTNAME
+echo "ROS_IP :"$ROS_IP
+echo "ROS_MASTER_URI :"$ROS_MASTER_URI
+
+
+
+// Then run `roscore` in robot machine. and then run the nodes.
+// you can then publish messages from the User Workstation.
+
+//-------** You need not run `roscore` in the User Workstation, this might arise a clash.
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+	Launch Files
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+- Launch files are very important when you have several programs to run.
+- You can run several ROS Nodes at once. 
+
+// What is a LAUNCH file ?
+	A launch file is a XML document, which specifies
+	- which nodes to execute
+	- their parameters
+	- what other launch files to include
+
+// `roslaunch` is a program that easily launches multiple ROS Nodes
+
+// launch file has a `.launch` extension
+
+//-----** `roslaunch` will start `roscore` if not started.
+
+example : you want to run the `turtlesim_node` and the `turtle_teleop_key` nodes by aunching a single file.
+
+location : /package_name/src/launch/turtlesim_begin.launch
+
+	<launch>
+		#<node pkg="package_name" type="node_name" name="alias_node_name" />
+
+		<node pkg="turtlesim" type="turtlesim_node" name="agv_turtlesim_node" output="screen" />
+		<node pkg="turtlesim" type="turtle_teleop_key" name="agv_turtle_teleop_node" output="screen" />    #name is the one that would be displayed when you do rosnode list.
+
+	</launch>
+
+//---- run it using the following line,
+	
+	$ roslaunch package_name turtlesim_begin.launch
+
+
+
+
+//========= Including a launch file inside other launch file & how to pass parameters to the node from it =============//
+
+example : include the `turtlesim_begin.launch` file inside other launch file and also run the `clean.py` or the node mentioned in `clean.cpp` file.
+
+location : /package_name/src/launch/turtlesim_clean.launch
+
+<launch>
+
+	<include file="$(find package_name)/src/launch/turtlesim_begin.launch"/>
+
+	<param name="x_goal" value="3.0" />	##---- These parameters are passed to the node mentioned beow.
+	<param name="y_goal" value="3.0" />     ##---- parameters should be declared right before the node it is passed to.
+
+	<node pkg="package_name" type="clean.py" name="turtlesim_clean_node" output="screen" />
+
+</launch>
+
+
+//-- To retrieve the parameter values in the node file, use the following
+
+	x = rospy.get_params("x_goal")		or 	double param_1; 
+	y = rospy.get_params("y_goal")			node_handle.getParam("/package_name/node_name_in_cpp", param_1); 
+
+
+

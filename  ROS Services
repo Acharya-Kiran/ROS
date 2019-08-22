@@ -1,0 +1,301 @@
+--------------------------------------------------------------------------------------------------------
+
+	ROS Services Overview
+
+--------------------------------------------------------------------------------------------------------
+- ROS Service is an other communication paradigm that involves a Server and a Client.
+
+//---** ROS Service is a one time communication	, where a client sends a request, then the server sends back the response and the communication is closed.
+  -----	If the Client wants additional information from the Server it needs to send another request.
+
+When to use ?
+
+- Request the robot to perform a specific action.
+ex. Imagine you'd like to do Path Planning from point A to B.
+    In this case we send a request to the planner and the planner shoud be implemented as a Service. so the planner is going to receive point A and B, and is going to have appropriate information 
+    regarding the map, and then it is going to make appropriate computations inorder to find a path, and finally sends back the path to the Client.
+
+example: to spawn a turtle (create a duplicate turtle) in a turtlesim simulator. //----- i.e Use a service that already exist
+	$ roscore
+
+	# Ctrl+Shift+t
+	$ rosrun turtlesim turtlesim_node
+	
+	# Ctrl+Shift+t
+	$ rosservice list   #lists all the active services
+	/clear
+	...
+	/spawn
+	...
+
+	# Understanding the structure of service -> /spawn, i.e.  what does it expects as arguments
+	$ rosservice info /spawn
+	Node : /turtlesim
+	URI : rosrpc://agv:58907
+	Type : turtlesim/Spawn          //message format used 
+	Args : x y theta name		//these are the contents of the message
+
+	# To find the structure of the message
+	$ rossrv info turtlesim/Spawn
+	float32 x
+	float32 y           //These are the arguments that the Client must send in a request
+	float32 theta    
+	string name
+	---
+	string name    // response from the server
+
+	# Call the service 
+	$ rosservice call /spawn 7 7 0 t2       // call made to server
+	name : "t2"				// response sent by the server
+	
+
+--------------------------------------------------------------------------------------------------------
+
+	Steps to write a ROS Service
+
+--------------------------------------------------------------------------------------------------------	
+
+//-- Difference between Topics and Services
+
+=================== ROS Topics  ===============================
+
+  --------------------------		Topic Message              -------------------------------
+  	Publisher		------------------------------>   	      Subscriber
+  --------------------------					   -------------------------------
+  
+  We have a Publisher that will continuously send some data to a Subscriber over a Topic. Subscriber doesn't send anything back to the Publisher
+
+
+
+=================== ROS Services  ===============================
+
+      -----------------		Request Message	       ---------------
+1. 	   Server	<----------------------------	   Client 
+      -----------------			               ---------------
+
+
+      -----------------		Respond Message	       ---------------
+2. 	   Server	---------------------------->	   Client 
+      -----------------			               ---------------
+
+
+
+//=============== Steps to create a Client/Server ROS Service application
+
+1. Define the service message (create a service file where we define the type of Message for service Request and Response)
+2. Create a ROS Server node  //ROS Program i.e. going to provide a service, and will be waiting for incoming request to process them. It will implement the processing logic
+3. Create a ROS Client node  // ROS Program that will request a service from a server by sending a request message and waiting for response message from the server.
+4. Execute the service
+5. Consume the Service by the Client
+
+
+ex. ROS Service : Add two Ints
+
+1. create a `srv` folder inside a Package.  //service file
+   create a `AddTwoInts.srv` file inside the `srv` folder.
+   then add following lines to it,
+	
+	int64 a
+	int64 b
+	---
+	int64 sum
+
+
+// We need to make changes in `package.xml` and `CMakelists.txt`
+
+-- `package.xml`
+
+	<build_depend>message_generation</build_depend>               // Responsibe for request & response message generation. These lines are responsibe for reading the service file and converting
+	...							      // it into a source code.  *** Source code for this is generated after compiling the workspace using `catkin_make`, in the path -
+	<exec_depend>message_runtime</exec_depend>		      // `/catkin_ws/devel/include/package_name/` as files `AddTwoInts.h`, `AddTwoIntsRequest.h` and `AddTwoIntsResponse.h`	
+
+-- `CMakelists.txt`
+	
+	find_package( catkin REQUIRED COMPONENTS
+	  ..
+	  message_generation
+	  ..
+	)
+
+	add_service_files(
+	  FILES AddTwoInts.srv
+	)
+
+	catkin_package(
+	  INCLUDE_DIRS include
+	  LIBRARIES ros_essentials_cpp
+	  CATKIN_DEPENDS roscpp rospy std_msgs ... message_runtime
+	  DEPENDS system_lib
+	)
+
+//----* to see if the service is created appropriately
+
+	$ rossrv show package_name/AddTwoInts
+		or
+	$ rossrv show AddTwoInts
+
+
+--------------------------------------------------------------------------------------------------------
+
+	ROS Service (Client/Server) in Python
+
+--------------------------------------------------------------------------------------------------------
+
+//------------------------------Server : add_server.py
+
+#!/usr/bin/env python
+
+from package_name.srv import AddTwoInts		     //
+from package_name.srv import AddTwoIntsRequest       // These are the source files created while compiling the workspace, which has to be imported inoredr to access the service & messages defined for this.
+from package_name.srv import AddTwoIntsResponse      //
+
+import rospy
+
+// Similar to a callback function for a Subscriber, a Server has a `handle function` i.e. going to process the incoming message, formulate response and send it back to the Client.
+def hande_add_two_ints(req):
+	print "Returning [%s + %s = %s]"%(req.a,req.b,(req.a+req.b))
+	return AddTwoIntsResponse(req.a+req.b)
+
+def add_two_ints_server():
+	rospy.init_node('add_two_inits_server')
+	s = rospy.Service('add_two_ints', AddTwoInts, hande_add_two_ints)
+	print "Ready to add two ints"
+	rospy.spin()
+
+if __name__ == "__main__" :
+	add_two_ints_server()
+
+
+//--------------------------------Client : add_client.py
+
+#!/usr/bin/env python
+import sys
+import rospy
+
+from package_name.srv import AddTwoInts	
+from package_name.srv import AddTwoIntsRequest
+from package_name.srv import AddTwoIntsResponse
+
+def add_two_clients(x, y):
+	rospy.wait_for_service('add_two_ints')    //wait for the service to be available
+	try:
+		add_two_ints = rospy.ServiceProxy('add_two_ints',AddTwoInts)   //ServiceProxy will be responsible for sending the request to the service & specifying its type. add_two_ints is the name of 										       // the Client obj
+		resp1 = add_two_ints(x,y)   //i.e. `a` & `b` for the service message
+		return resp1.sum
+	except rosy.ServiceException e:
+		print "Service call failed : %s"%e
+
+def usage():
+	return "%s [x y]"%sys.argv[0]
+
+if __name__ == "__main__" :
+	if len(sys.argv) == 3:
+		x = int(sys.argv[1])
+		y = int(sys.argv[2])
+	else:
+		print usage()
+		sys.exit(1)
+	print "Requesting %s+%s"%(x,y)
+	print "%s + %s = %s"%(x, y, add_two_ints_client(x,y))
+
+
+//---- Execution
+	$ roscore
+
+	$ rosrun package_name add_server.py
+
+	$ rosrun package_name add_client.py 2 8
+	  Requesting 2+8
+	  2 + 8 = 10
+
+--------------------------------------------------------------------------------------------------------
+
+	ROS Service (Client/Server) in C++
+
+--------------------------------------------------------------------------------------------------------
+
+//To execute the service we'll hve to make some additional changes in "CMakelists.txt" of the workspace.
+
+add_executable(add_two_ints_server src/package_name/../add_two_ints_server.cpp)
+target_link_libraries(add_two_ints_server ${catkin_LIBRARIES})
+add_dependencies(add_two_ints_server package_name_gencpp)
+
+add_executable(add_two_ints_client src/package_name/../add_two_ints_client.cpp)
+target_link_libraries(add_two_ints_client ${catkin_LIBRARIES})
+add_dependencies(add_two_ints_client package_name_gencpp)
+
+	$ catkin_make //compile the workspace
+
+
+//------------------------------Server : add_two_ints_server.cpp
+
+#include "ros/ros.h"
+#include "package_name/AddTwoInts.h"   //service file
+
+bool handle_add(package_name::AddTwoInts::Request &req, package_name::AddTwoInts::Response &res)
+{
+	res.sum = req.a + req.b;
+	ROS_INFO("request : x=%ld, y=%ld", (long int)req.a, (long int)req.b);
+	ROS_INFO("sending back response: [%ld]", (long int)res.sum);
+	return true;
+}
+
+int main(int argc, char **argv)
+{
+	ros::init(argc, argv, "add_two_ints_server");
+	ros::NodeHandle n;
+
+	ros::ServiceServer service = n.advertiseService("add_two_ints_server", handle_add);
+	ROS_INFO("REady to add two ints.");
+	ros::spin();
+
+	return 0;
+}
+
+
+//------------------------------Client : add_two_ints_client.cpp
+
+#include "ros/ros.h"
+#include "ros_essentials_cpp/AddTwoInts.h"  //service file
+#include <cstdlib>
+
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "add_two_ints_client");
+  if (argc != 3)
+  {
+    ROS_INFO("usage: add_two_ints_client X Y");
+    return 1;
+  }
+
+  ros::NodeHandle n;
+  ros::ServiceClient client = n.serviceClient<ros_essentials_cpp::AddTwoInts>("add_two_ints_server");
+						---type of Service---	   --Server Node name--
+
+  ros_essentials_cpp::AddTwoInts srv; // Service object
+ 
+  srv.request.a = atoll(argv[1]); //atoll converts a string into `long long integer`
+  srv.request.b = atoll(argv[2]);
+
+  if (client.call(srv))
+  {
+    ROS_INFO("Sum: %ld", (long int)srv.response.sum);
+  }
+  else
+  {
+    ROS_ERROR("Failed to call service add_two_ints");
+    return 1;
+  }
+
+  return 0;
+}
+
+
+//-----------------------Execution
+	$ roscore
+	$ rosrun packae_name add_two_ints_server
+	$ rosrun packae_name add_two_ints_client 4 7
+
+
+//------------------ ***** Advantage of ROS: You can create a Server in C++ and run a Client in python or vice-versa
+

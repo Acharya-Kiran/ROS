@@ -1,0 +1,195 @@
+------------------------------------------------------------------------------------------------------
+
+	OpenCV Overview
+
+------------------------------------------------------------------------------------------------------
+
+//--- It is important that a robot perceives the environment around it and extract useful information from the environment to be able to plan its motion and act in an appropriate fashion. This is
+  --- referred to as Robot Perception, a popular field in Robotics based on Computer-Vision.	
+
+//--- Computer-Vision includes method for acquiring, processing, analyzing and understanding digital images.
+//--- most popular library for Computer-Vision & image processing is `OpenCV`.
+
+some basic applications of OpenCV:
+
+* Image Segmentation
+	- process of partitioning a digital image into multiple segments
+	- used to locate objects and boundaries (lines, curves, etc) in images.
+
+* Image Thresholding
+	- Its the simplest form of Image Segmentation
+	- It allows to transform a grayscale image (single channel image, still pixel values can be represented using any value in 8-bit [0-255] ) to a binary image (image with pixels having either of 2 		  values based on the threshold).
+
+* Object Detection & Tracking
+	- Detecting instances of semantic objects of a certain class (such as humans, buildings or cars) in digital images and videos.
+
+* Edge Detection
+	- Find boundaries of objects within images
+	- Works by detecting discontinuities in brightness
+	- used for Image segmentation and data extraction
+
+
+------------------------------------------------------------------------------------------------------
+
+	Install OpenCV for ROS
+
+------------------------------------------------------------------------------------------------------
+	//OpenCV version depends on the Ubuntu version. Kinetic supports OpenCV3
+
+	$ sudo apt-get update
+	//download the install-opencv.sh file
+	$ sudo bash install-opencv.sh
+	$ export PYTHONPATH="/home/usr/local/lib"
+
+	//to check
+	$ python
+	>>> import cv2
+	>> cv2.__version__
+	4.1.0
+
+	//install usb-cam
+	$ sudo apt-get install ros-kinetic-usb-cam
+
+	//install image-view
+	$ sudo apt-get install ros-kinetic-image-view	//helps in usage of images from USB and from image_topics
+
+
+------------------------------------------------------------------------------------------------------
+
+	OpenCV : Open & Save Images (Python)
+
+------------------------------------------------------------------------------------------------------
+//open_copy.py
+
+	#!/usr/bin/env python  //it describes the type of the script.
+
+	import cv2
+	import numpy as np  //data-structure that will handle images
+
+	image_name = "tree"
+
+	//read an image from file
+	img = cv2.imread("/home/../images/"+image_name+".jpg")	//-------** give path from the home directory
+
+	//create a window holder for an image. Created windows are referred to by their names, here name = "Image"
+	cv2.namedWindow("Image",cv2.WINDOW_NORMAL)
+
+		//The supported flags are:
+
+		//---WINDOW_NORMAL   If this is set, the user can resize the window (no constraint).
+		//---WINDOW_AUTOSIZE If this is set, the window size is automatically adjusted to fit the displayed image (see imshow() ), and you cannot change the
+							 window size manually.
+		//---WINDOW_OPENGL   If this is set, the window will be created with OpenGL support.
+
+	//display the image
+	cv2.imshow("Image",img)
+
+	//press a key inside the image to make a copy. image copied to `images/copy/` folder
+	cv2.waitKey(0)
+	cv2.imwrite("/home/../images/copy/"+image_name+"-copy.jpg", img)
+
+#---- ways to execute 
+	$ python open_copy.py
+		or
+	$ rosrun ros_essentials_cpp open_copy.py
+
+
+------------------------------------------------------------------------------------------------------
+
+	OpenCV : Open & Save Images (Python)
+
+------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------
+
+	OpenCV : Pixels and Image Structure (Python)
+
+------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------
+
+	OpenCV : Image Encoding (Python)
+
+------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------
+
+	OpenCV : Video Streams Input (Python)
+
+------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------
+
+	OpenCV : Drawing Shapes (Python)
+
+------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------
+
+	CvBridge : Bridging OpenCV and ROS
+
+------------------------------------------------------------------------------------------------------
+
+- So far we have used images from files or from camera devices directly using OpenCV functionality.
+//- In ROS, images are collected from the topics that are published by the drivers of the cameras. so we don't have direct access to the cameras to be able to  
+    use the OpenCV functionalities but depend on ROS topics. 
+  - so we need to create a subscriber in ROS inorder to receive the image and then sending this image to OpenCV for further process.
+
+// **---- The image format supported in ROS is different and not compatible with the image format supported by OpenCV.
+     ---- For this reason there is a need to transform any image comin from ROS into the format of OpenCV, and vice-versa when we need to publish it back to ROS.
+
+// - Fortunately there is a special component called `CvBridge` that allows to make this conversion from ROS format to OpenCV format & vice-versa.
+
+------------- Architecture of CvBridge :
+
+			----------------------------------------------
+			[ OpenCV            =====================    ]
+			[                      OpenCV  cv::Mat       ]
+			[                   =====================    ]
+			[                               ^            ]
+			[                               [            ]
+			----------------------------------------------
+										    [
+										    [
+			----------------------------------------------
+			[ ROS                           [            ]
+			[                               v            ]
+			[                   =====================    ]
+			[                          CvBridge          ]
+			[                   =====================    ]
+			[                               ^            ]
+			[                               [            ]
+			[                               v            ]
+			[                   =====================    ]
+			[                     ROS Image Message      ]
+			[                   =====================    ]
+			----------------------------------------------
+
+- Initially we have images published by Camera drivers and subscribed through ROS Topics and are stored in ROS Image Message format, which we want to process  
+  using OpenCV library.
+- CvBridge then transforms this message into a format understood by OpenCV
+- OpenCV then does the necessary processing on the image.
+- CvBrige then transforms this message into a format understood by ROS
+
+ex. image_pub_sub.py
+
+	import rospy
+	import cv2
+	from std_msgs.msg import String
+	from sensor_msgs.msg import Image
+	from cv_bridge import CvBridge, CvBridgeError
+	import sys
+
+	bridge = CvBridge()
+
+
+	def main(args):
+		rospy.init_node("image_converter", anonymous=True)
+		
+
+
+
+
+
+
+
