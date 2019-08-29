@@ -11,6 +11,9 @@
 	$ cd catkin_ws/
 	$ catkin_make   //Compile the workspace
 
+//-** sometimes `catkin_make` gives error coz its not able to find `catkin_pkg`. so you need to add its path to PYTHONPATH.
+//--- $ export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages
+
 	//After compiling, `build` and `devel` folders are created inside the workspace. 
 	//The `build` contains the compiled files.
 	//The `devel` contains the 'setup.bash' file which has to be executed using 'source' command to enable workspace.

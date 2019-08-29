@@ -1,0 +1,297 @@
+--------------------------------------------------------------------------------------
+
+	Laser Range Finders (Laser Scanners)
+
+--------------------------------------------------------------------------------------
+
+- Its another way of Robot Perception like Camera. But unlike Camera that provides only 2D information which doesn't say anything about the distance of 
+  obstacles or objects from the Robot, for which we require a 3rd dimension which is obtained from devices like `Laser Scanner`.
+
+- Laser Scanners :
+	- device that measure the distance to obstacles using laser beams.
+	- working : The device sends lasers to different directions and they are going to bounce back when they hit an obstacle and they are going to be captured by 
+				a camera. Knowing the offset between the laser source and the camera, it is possibe to estimate using the time of light the distance to the 
+				objects. 
+	- used in several robotics applications like,
+		. SLAM : building maps
+		. Obstacle Avoidance
+		. Navigation
+
+
+--------------------------------------------------------------------------------------
+
+	Laser Range Finders Characteristics
+
+--------------------------------------------------------------------------------------
+
+minimum angle : start angle of scan
+maximum angle : end angle of scan
+Angle increment (angle resolution) : angular distance between measurements
+Time increment : time between measurements 			//time between 2 laser beams
+Scan time : time between two scans  				//scan is one complete measurement of laser beams within minimum and maximum angle
+Minimum range : minimum observable range value 		//minimum distance that can be covered by a laser beam
+Maximum range : maximum observable range value 		//maximum distance that can be covered by a laser beam
+List of ranges : list of all measurements in a scans  //list of all distances measured by each laser beam in a scan
+List of intensities : list of all intensities in a scan //
+
+//------** for a laser scanner the field of view is, 
+		- front : 0 degree
+		- right : minimum angle
+		- left  : maximum angle
+
+
+--------------------------------------------------------------------------------------
+
+	Commercial Laser Range Finder Devices
+
+--------------------------------------------------------------------------------------
+
+- Hokuyo URG-04LX-UG01
+
+		max range         : 0.02 - 5.6 m
+		max field of view : 240 [-120, 120] with 0.36 degree angular resolution
+		environment suitable : Indoor
+		scan frequency : 10Hz (100 m sec/ scan)
+		voltage : 5V @0.5A
+		interface : USB 2.0
+
+- RPLIDAR A2
+		
+		max range         : 0.15 - 6 m
+		max field of view : 360 [-180, 180]
+		environment suitable : Indoor
+		scan frequency : 10Hz (100 m sec/ scan)
+		voltage : 5V @0.45A
+		interface : UART
+
+
+**----- RGBD Cameras : They are known as `depth cameras`, coz
+					   They are equipped with stereo camera which are going to provide a two dimensional image and then the laser scanner is going to give
+					   information about the depth, which help them generate 3 Dimensional depth images.
+
+- Orbbec Astra S
+
+		max range         : 0.5 - 8 m
+		max field of view : 60 deg horizontal x 49.5 deg vertical x 70 deg diagonal
+		environment suitable : Indoor
+		depth image size : 640 * 480 (VGA) 16 bit @ 30 FPS
+		voltage : 5V 
+		interface : USB 2.0
+
+- Intel RealSense Camera R200
+
+		max range         : 0.5 - 3.5 m
+		max field of view : 60 deg horizontal x 49.5 deg vertical x 70 deg diagonal
+		environment suitable : Indoor
+		scan frequency : 40Hz (25 m sec/ scan)
+		voltage : 5V 
+		interface : USB 3.0
+	
+
+
+--------------------------------------------------------------------------------------
+
+	Connect Asus Live Pro RGBD Camera as a Laser Scanner
+
+--------------------------------------------------------------------------------------
+
+- we need to start the drivers of the RGBD Camera. i.e. Start Openni Package. 
+  Different ROS versions have different RGBD cameras set as default. Indigo -> Micrsoft Kinect, Kinetic -> ASUS Live Pro
+	
+	$ roslaunch openni2_launch openni2.launch       // if package not availabe := $ sudo apt-get install ros-kinetic-openni2-*
+
+	//this will activate all the ROS topics related ro camera
+
+- convert depth image to Laser Scanner.						or 		$ roslaunch depthimage_to_laserscan depthimage_to_laserscan image:=/camera/depth/image_raw
+	
+	$ roslaunch ros_essentials_cpp depth_image_to_laser.launch  													          --- same as remapping in launch 
+	                                                                                                                                        file ---
+
+	//this node is used to generate a scan data from the depth image. i.e. we'll have `/scan` topic activated in rostopic list
+
+- open with rviz and test with `rostopic echo`
+
+
+// depth_image_to_laser.launch
+
+	<launch>
+		<node name="depthimage_to_laserscan"
+			  pkg="depthimage_to_laserscan" type="depthimage_to_laserscan">
+		<remap from="image" to="/camera/depth/image_raw" />
+		</node>
+	</launch>
+
+
+--------------------------------------------------------------------------------------
+
+	Connect a Laser Range Finder (Hokuyo URG-04LX-UG01)
+
+--------------------------------------------------------------------------------------
+
+- start urg_node Package
+
+	$ rosrun urg_node urg_node			// if not installed :=     $ sudo apt-get install ros-kinetic-urg-node 
+
+- create a TF transform between /map and /laser frame. i.e. specifying the position of the laser with respect to the world i.e. map.
+	
+											
+														    
+	$ rosrun tf static_transform_publisher 0.0 0.0 0.0 0.0 0.0 0.0 1.0     map        laser           10
+	                                        x   y   z  qx   qy  qz  qw  frame_id  child_frame_id  period_in_ms
+
+// Note : Euler -> (roll, pitch, yaw)
+		  ------ Problem with Euler is that of `Gimbal Lock`- lose one degree of freedom. Problem happens when axis of rotation line up on top of each other.	
+
+		  Quaternions ->  is a four tuple of real number seen as a vector (qx, qy, qz, qw) and a scalar `qv + qw`, where qw - real part, qv - imaginary part
+		  				  qv = i*qx + j*qy + k*qz, 
+		  				  i*i = j*j = k*k = -1, 
+		  				  j*k = -k*j = i, k*i = -i*k = j, i*j = -j*i = k
+
+- open with `rviz` and test with `rostopic echo`
+
+
+
+--------------------------------------------------------------------------------------
+
+	Save Laser Scan messages into a Bag file and replay them
+
+--------------------------------------------------------------------------------------
+
+// `rosbag` is a utility in ros that allows to record messages published by topics into a file and then replay them again.
+    This technique is useful to develop and test algorithms and to replay existing scenarios or experiments.
+
+// after running all the nodes that publishes information, we need to run the command to collect the data into a bag, inside the folder where you want to save 
+   the bag.
+
+   $ rosbag record -a   //---- will record all the topic data
+
+// to see the info in a bag file
+
+	$ rosbag info file_name.bag
+
+// to replay the ag
+
+	$ rosbag play file_name.bag
+
+
+--------------------------------------------------------------------------------------
+
+	Write a ROS Node as Subscriber to Laser Scanner 
+
+--------------------------------------------------------------------------------------
+
+- Start the drivers of the Laser Scanner
+- Make sure that `/scan` topic is availale
+- Write a node that subscribes to the `/scan` topic.
+- write a callback function that receives `/scan` messages and process them.
+
+
+//----------------------------------------------- Python
+
+#!/usr/bin/env python
+import rospy
+from sensor_msgs.msg import LaserScan
+import math
+
+def scan_callback(scan_data):
+	min_value, min_index = min_range_index(scan_data.ranges)
+	max_value, max_index = max_range_index(scan_data.ranges)
+	average_value = average_range(scan_data.ranges)
+	average2 = average_between_indices(scan_data.ranges, 2, 7)
+
+def min_range_index(ranges):
+	ranges = [x for x in ranges if not math.isnan(x)]
+	return (min(ranges), ranges.index(min(ranges)))
+
+def max_range_index(ranges):
+	ranges = [x for x in ranges if not math.isnan(x)]
+	return (max(ranges), ranges.index(max(ranges)))
+
+def average_range(ranges):
+	ranges = [x for x in ranges if not math.isnan(x)]
+	return (sum(ranges)/float(len(ranges)))
+
+def average_between_indices(ranges, i, j):
+	ranges = [x for x in ranges if not math.isnan(x)]
+	slice_of_array = ranges[i:j+1]
+	return (sum(slice_of_array)/float(len(slice_of_array)))
+
+if __name_ == "__main__":
+	rospy.init_node('scan_node', anonymous=True)
+	rospy.Subscriber('scan', LaserScan, scan_callback)
+	rospy.spin()  //---keeps python from exiting until this node is stopped
+
+
+
+//----------------------------------------------- C++
+
+#include "ros/ros.h"
+#include "sensor_msgs/LaserScan.h"
+#include "laserscan/LaserScanner.h"  //----custom header file under `laserscan` folder. contains `LaserScanner` class.
+
+using namespace std;
+
+#sensor_msgs::LaserScan _scanMsg;
+ros::Subscriber scanSubscriber;
+
+void scanCallback(sensor_msgs::LaserScan scanMessage);
+
+int main(int argc, char** argv){
+	
+	ros::init(argc, argv, "scan_subscriber_cpp");
+	ros::NodeHandle n;
+
+	scanSubscriber = n.subscribe("/scan", 10, scanCallback)
+
+	ros::spin();
+}
+
+void scanCallback(sensor_msgs::LaserScan scanMessage){
+	
+	cout << "minimum range: " << LaserScanner::getMinimumRange(scanMessage) << endl;		//-- these methods are static under LaserScanner class. so is 
+																							//accessed using the class name and not by creating object.
+	cout << "maximum range: " << LaserScanner::getMaximumRange(scanMessage) << endl;
+	cout << "average range: " << LaserScanner::getAverageRange(scanMessage, 0, 600) << endl;
+	if (LaserScanner::isObstacleTooClose(scanMessage, 0, 600, 0.69)==true){
+		cout << "obstacle too close" << endl;
+	}
+	cout << endl;
+
+}
+
+// there are following files under `laser` folder
+
+	- LaserScanner.h
+	- LaserScanner.cpp
+	- utility_lib.cpp
+	- utility_lib.h
+
+// `utility_lib.h` is used in `LaserScanner.cpp`
+
+//------ To make these run in ROS, we need to make changes in `CMakeLists.txt` of package
+
+	add_library(utility_lib src/topic04_perception02_laser/laserscan/utility_lib.cpp)
+	// there was no ROS things used in utility_lib.cpp so no need to link this library to catkin_LIBRARIES
+
+	add_library(laserscan_lib src/topic04_perception02_laser/laserscan/LaserScanner.cpp)
+	target_link_libraries(laserscan_lib ${catkin_LIBRARIES})
+	add_dependencies(laserscan_lib ${catkin_EXPORTED_TARGETS})
+	target_link_libraries(laserscan_lib utility_lib)                    ********* LINKING laserscan_lib and utility_lib
+
+	add_executable(scan_subscriber_cpp src/topic04_perception02_laser/scan_subscriber.cpp)
+	target_link_libraries(scan_subscriber_cpp ${catkin_LIBRARIES})
+	target_link_libraries(scan_subscriber_cpp laserscan_lib)			********* LINKING scan_subscriber_cpp and laserscan_lib 
+
+// Note :
+		Usage of following in header files,
+
+			#ifndef LASERSCAN_H
+			#define LASERSCAN_H 
+			...
+			#endif
+
+		Once the header is included, it checks if a unique value (in this case LASERSCAN_H) is defined. Then if it's not defined, it defines it and continues to the rest of the page.
+
+		When the code is included again, the first ifndef fails, resulting in a blank file.
+
+		That prevents double declaration of any identifiers such as types, enums and `static` variables.

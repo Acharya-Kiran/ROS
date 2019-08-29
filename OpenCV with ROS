@@ -93,12 +93,48 @@ some basic applications of OpenCV:
 		or
 	$ rosrun ros_essentials_cpp open_copy.py
 
-
 ------------------------------------------------------------------------------------------------------
 
-	OpenCV : Open & Save Images (Python)
+	OpenCV : Open & Save Images (C++)
 
 ------------------------------------------------------------------------------------------------------
+//-- open_copy.cpp
+
+	#include <highgui.h>
+	#include <opencv2/imgproc/imgproc.hpp>
+	#include <stdio.h>
+	#include "opencv2/opencv.hpp"
+
+	using namespace cv;
+	using namespace std;
+
+	int main(){
+
+		Mat image;
+		image = imread("",CV_LOAD_IMAGE_COLOR); //read the file `chess.jpg`
+
+		if( !image.data ){ //check for imvalid input
+
+			cout <<  "Could not open or find the image" << endl;
+			return -1;
+		} 
+
+		namedWindow("window", CV_WINDOW_AUTOSIZE); //create a window for display
+		imshow("window", image);    // show our image inside it
+
+		imwrite("", image);
+		waitKey(0);			// wait for a keystroke in the window
+
+		return 0;
+	}
+
+// add as executable in CMakeLists.txt
+
+find_package(OpenCV)
+include_directories(${OpenCV_INCLUDE_DIRS})
+add_executable(read_video_cpp src/topic03_perception/cpp/open_copy.cpp)  // `read_video_cpp` is the name of the executable
+target_link_libraries(read_video_cpp ${catkin_LIBRARIES})
+target_link_libraries(read_video_cpp ${OpenCV_LIBRARIES})
 
 ------------------------------------------------------------------------------------------------------
 
@@ -106,17 +142,153 @@ some basic applications of OpenCV:
 
 ------------------------------------------------------------------------------------------------------
 
+//--- image_structure.py
+
+	import numpy as np
+	import cv2
+
+	image_name = "blackwhite"
+
+	print "read an image from file"
+	img = cv2.imread("images/"+image_name+".jpg")
+	
+	print "display the content of the image"
+	print img   // prints the numpy array
+
+	print type(img) // prints <type 'numpy.ndarray'>
+
+	print img.size // prints number of values i.e. height(rows) * width(cols) * channels
+
+	print "pixel at row 10 and col 5"
+	print img[10,5]
+
+	print "access the first channel"
+	print img[:,:,0]
+
 ------------------------------------------------------------------------------------------------------
 
 	OpenCV : Image Encoding (Python)
 
 ------------------------------------------------------------------------------------------------------
 
+general types,
+- Grayscale
+- Red, Green, Blue
+- Hue, Saturation, Value (hsv)
+	; Hue indicates the type of color we see in 360 degree format.
+		Red     : 0   - 60
+		Yellow  : 60  - 120
+		Green   : 120 - 180
+		Cyan    : 180 - 240
+		Blue    : 240 - 300
+		Magenta : 300 - 360
+	; Saturation indicates how saturated an individual color is, i.e. the amount of gray in the color. from 0-100 percent
+	; Value (brightness) is the intensity of the color from 0 - 100 percent. 0 is completely black and 100 is the brightest.
+
+// OpenCV reads the image in BGR format using cv2.imread().
+
+ex.//------ image_encoding.py
+
+	#!/usr/bin/env python
+
+	import numpy as np
+	import cv2
+
+	image_name = "tree"
+
+	color_image = cv2.imread("images/tree.jpg", cv2.IMREAD_COLOR)
+	cv2.imshow("Original Image", color_image)
+	cv2.moveWindow("Original Image", 0, 0)
+
+	height, width, channels = color_image.shape
+
+	blue, green, red = cv2.split(color_image) // split the image into 3 channels
+
+	cv2.imshow("Blue Channel", blue)
+	cv2.moveWindow("Blue Channel", 0, height)
+
+	cv2.imshow("Red Channel", red)
+	cv2.moveWindow("Red Channel", 0, height)
+
+	cv2.imshow("Green Channel", green)
+	cv2.moveWindow("Green Channel", 0, height)
+
+	hsv = cv2.cvtColor(color-image, cv2.COLOR_BGR2HSV)
+	h, s, v = cv2.split(hsv)
+	hsv_image = np.concatenate((h,s,v), axis=1)
+	cv2.imshow(hsv_image)
+
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
+
+
+
+
 ------------------------------------------------------------------------------------------------------
 
 	OpenCV : Video Streams Input (Python)
 
 ------------------------------------------------------------------------------------------------------
+
+ex. //-- read_video.py
+
+	#!/usr/bin/env python
+
+	import numpy as np
+	import cv2
+
+	video_capture = cv2.VideoCapture(0)
+	while(True):
+		ret, frame = video_capture.read()
+		cv2.imshow("Frame", frame)
+		if cv2.waitKey(1000) & 0xFF == ord('q'):
+			break
+	video_capture.release()
+	cv2.destroyAllWindows()
+
+
+------------------------------------------------------------------------------------------------------
+
+	OpenCV : Video Streams Input (C++)
+
+------------------------------------------------------------------------------------------------------
+
+//-- read_video.cpp
+
+	#include "opencv2/opencv.hpp"
+	using namespace cv;
+
+	int main(int argc, char** argv){
+
+		VideoCapture video_capture(0)  // open the default camera
+		if(!video_captured.isOpened()) // check if we succeeded
+			return -1;
+
+		Mat gray_image;
+		namedWindow("edges", 1)
+		while(true){
+
+			Mat frame;
+			video_capture >> frame;  							// get a new frame from camera
+			cvtColor(frame, gray_image, COLOR_BGR2GRAY);  		// converts frame into grayscale and stores in gray_image
+			//GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
+			//Canny(edges, edges, 0, 30, 3);
+			imshow("Gray Image", gray_image);
+			if (waitKey(30) >= 0) break;
+
+		}
+		// the camera will be deinitialized automatically 
+		return 0;
+
+	}
+
+// in CMakeLists.txt,  add following lines
+
+find_package(OpenCV)
+include_directories(${OpenCV_INCLUDE_DIRS})
+add_executable(read_video_cpp src/topic03_perception/cpp/read_video.cpp)  // `read_video_cpp` is the name of the executable
+target_link_libraries(read_video_cpp ${catkin_LIBRARIES})
+target_link_libraries(read_video_cpp ${OpenCV_LIBRARIES})
 
 ------------------------------------------------------------------------------------------------------
 
@@ -171,7 +343,7 @@ some basic applications of OpenCV:
 - OpenCV then does the necessary processing on the image.
 - CvBrige then transforms this message into a format understood by ROS
 
-ex. image_pub_sub.py
+ex.----------------------------------------------------------- image_pub_sub.py
 
 	import rospy
 	import cv2
@@ -182,9 +354,361 @@ ex. image_pub_sub.py
 
 	bridge = CvBridge()
 
+	def image_callback(ros_image):
+		print "got an image"
+		global bridge
+		
+		#convert ROS image into OpenCV compatible image.
+		try:
+			cv_image = bridge.imgmsg_to_cv2(ros_image, "bgr8")
+		except CvBridgeError as e:
+			print(e)
+
+		#now you can work exactly like with opencv
+		(rows, cols, channels) = cv_image.shape
+		if cols>200 and rows>200 :
+			cv2.circle(cv_image, (100,100), 90, 255)
+		font = cv2.FONT_HERSHEY_SIMPLEX
+		cv2.putText(cv_image, "Web Cam Activated", (10, 350), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+		cv2.imshow("Image window", cv_image)
+		cv2.waitKey(3)
+
 
 	def main(args):
 		rospy.init_node("image_converter", anonymous=True)
+
+		#image_topic = "/usb_cam/image_raw"   // for usb cam
+		image_topic = "/camera/rgb/image_raw" // for web cam
+		image_sub = rospy.Subscriber(image_topic, Image, image_callback)		
+
+		try:
+			rospy.spin()
+		except KeyboardInterrupt:
+			print("shutting down")
+		cv2.destroyAllWindows()
+
+		if __name__ == "__main__":
+			main(sys.argv)
+
+// execution :
+	$ roscore
+
+	##--- usb_cam is a ros_package to get images from computer camera and publish them into ROS Topic called `/usb_cam/image_raw`
+	$ rosrun usb_cam usb_cam_node _pixel_format:=yuyv
+
+	##--- verify by viewing the images passed by camera
+	$ rosrun image_view image_view image:=/usb_cam/image_raw    
+
+
+ex. --------------------------------------------------------- image_pub_sub.cpp
+
+	#include <ros/ros.h>
+	#include <image_transport/image_transport.h> //**--- Its a transfer protocol for streaming images
+	#include <cv_bridge/cv_bridge.h>
+	#include <sensor_msgs/image_encodings.h>
+	#include <opencv2/imgproc/imgproc.hpp>
+	#include <opencv2/highgui/highgui.hpp>
+
+	static const std::string OPENCV_WINDOW = "Image window";
+
+	class ImageConverter{
+
+		ros::NodeHandle nh_;
+		image_transport::ImageTransport it_;
+		image_transport::Subscriber image_sub_;
+		image_transport::Publisher image_pub_;
+	public:
+		ImageConverter() : it_(nh_) {
+
+			image_sub = it_.subscribe("image", 1, &ImageConverter::imageCallback, this);
+			image_pub = it_.advertise("/image_converter/output_video", 1);
+
+			cv::namedWindow(OPENCV_WINDOW);
+		}
+
+		~ImageConverter()
+		{
+			cv::destroyWindow(OpenCV_Window);
+
+		}
+
+		void imageCallback(const sensor_msgs::ImgConstPtr& msg){
+
+			cv_bridge::CvImagePtr cv_ptr;
+			try{
+				cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+			}
+			catch (cv_bridge::Exception& e){
+				ROS_ERROR("cv_bridge exception: %s", e.what());
+				return;
+			}
+
+			if(cv_ptr->image.rows > 60 && cv_ptr->image.cols > 60)
+				cv::circle(cv_ptr->image, cv::Point(50, 50), 10, CV_RGB(255, 0, 0));
+
+			cv::imshow(OPENCV_WINDOW, cv_ptr->image);
+			cv::waitKey(3);
+
+			image_pub.publish(cv_ptr->toImageMsg()); //-----converts the image format from opencv to ROS and publishes
+
+		}
+
+	};
+
+	int main(int argc, char** argv){
+		ros::init(argc, argv, "image_converter");
+		ImageConverter ic;
+		ros::spin();
+		return 0;
+
+	}
+
+// to make this run, we need to make some changes in CMakeLists.txt
+
+find_package( catkin REQUIRED COMPONENTS
+...
+cv_bridge
+image_transport
+
+)
+
+add_executable(image_pub_sub_cpp src/topic03_perception/cpp/image_pub_sub.cpp)  // `read_video_cpp` is the name of the executable
+target_link_libraries(image_pub_sub_cpp ${catkin_LIBRARIES})
+target_link_libraries(image_pub_sub_cpp ${OpenCV_LIBRARIES})
+
+------------------------------------------------------------------------------------------------------
+
+	Simple & Adaptive Thresholding in OpenCV
+
+------------------------------------------------------------------------------------------------------
+
+// Thresholding :
+	- operates on grayscale images (single channel)
+	- Algorithm : If a pixel value is greater than a threshold it is assigned a certain value ex. 255 for white, and when lower it is
+				  assigned another value, ex. 0 for black
+	- Types 	: 
+			Simple Thresholding (static) -> cv2.threshold(gray_image, threshold_value, max_value, threshold_style)
+					max_value = 255 #considering 8 bit used to represent colors
+					threshold_style :
+							THRESH_BINARY
+							THRESH_BINARY_INV
+							..
+					// Simple Thresholding may not be good in all lighting conditions.
+
+			Adaptive Thresholding :
+					- The algorithm calculates the threshold for a small region of the image.
+					- different thresholds will be calculated for different regions of the same image.
+					- better robustness to varying illumination
+
+				cv2.adaptive_thresholding(gray_image, max_value, adaptive_method, block_size, constant)
+						adaptive methods :
+							cv2.ADAPTIVE_THRESH_MEAN_C -> threshold value is mean of the neighborhood area
+							cv2.ADAPTIVE_THRESH_GAUSSIAN_C -> threshold value is weighted sum of the neighborhood area where weights are in 
+															  gaussian window
+						Block size : decides the size of the neighborhood
+						constant : a value that is subtracted from the mean or weighted mean calculated.
+
+ex. //image_thresholding.py
+	
+	#!/usr/bin/env python
+	import numpy as np
+	import cv2
+
+	def read_image(image_name, as_gray):
+		if as_gray:
+			image = cv2.imread(image_name, cv2.IMREAD_GRAYSCALE)
+		else:
+			image = cv2.imread(image_name, cv2.IMREAD_COLOR)
+		cv2.imshow("RGB Image", image)
+		return image
+
+	def simple_thresholding(rgb_image, threshold_value):
+		ret, thresh_basic = cv2.threshold(rgb_image,
+										  threshold_value,
+										  255,
+										  cv2.THRESH_BINARY_INV)
+
+	def adaptive_thresholding(rgb_image, threshold_value):
+		adaptive_threshold_image = cv2.adaptiveThreshold( rgb_image,
+														  255,
+														  cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+														  cv2.THRESH_BINARY_INV,
+														  threshold_value,
+														  2)
+
+	def main():
+		image_name = "images/shapes.png"
+		as_gray = True
+		threshold_value = 115
+		gray_image = read_image(image_name, as_gray)
+		simple_thresholding(gray_image, threshold_value)
+		adaptive_thresholding(gray_image, threshold_value)
+		cv2.waitKey(0)
+		cv2.destroyAllWindows()
+
+	if __name__=="__main__":
+		main()
+
+
+
+------------------------------------------------------------------------------------------------------
+
+	Color Filtering
+
+------------------------------------------------------------------------------------------------------
+
+- Used in detection of objects having specific colors.
+- Algorithm :
+	. Read image as RGB image
+	. Convert image to HSV image // HSV is more robust to external light changes while RGB isn't
+	. Define upper and lower color ranges
+	. Create the mask based on color ranges
+
+ex. color_filtering.py
+
+	import numpy as np
+	import cv2
+	import imutils
+
+	image = cv2.imread("images/tennisball01.jpg")
+	cv2.imshow("Original", image)
+
+	#convert image to HSV color space
+	hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+	#-- OpenCV uses different ranges for HSV
+	#-- Hue : 0-180
+	#-- Saturation : 0-255
+	#-- Value : 0-255
+
+	#find upper and lower bounds of yellow color (tennis ball)
+	yellowLower = (30, 80, 10)  #-hsv
+	yellowUpper = (60, 255, 255)
+
+	#- define a mask using the above
+	mask = cv2.inRange(hsv, yellowLower, yellowUpper)  #--inRange() performs a thresholding operation and converts images into black & white
+
+	cv2.imshow("mask", mask)
+
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
+
+
+------------------------------------------------------------------------------------------------------
+
+	Contours Detection & Processing
+
+------------------------------------------------------------------------------------------------------
+- Edge(contour) detection is an image processing techique for finding the boundaries of objects within images.
+- Contours are a curve joining the continuous points (along the boundary) having same color or intensity.
+- It works by detecting discontinuity in brightness.
+
+Usage : useful tool for shape analysis, image segmentation, object detection and detection.
+
+Algorithm :
+	- Read image as RGB image'
+	- Convert image to grayscale image
+	- Convert grayimage to binary image
+	- find the contours using `cv2.findContours()` applied on a binary image
+	- Process the contours (find its area, enclosing circle, perimeter, moment and centroid)
+
+Contours Hierarchy
+	- in an image, some shapes are inside others.
+	- The outer shape is called parent, and the inner shape is called child.
+
+Contour Retrieval techniques using flags,
+	- RETR_LIST : simply retrieves all contours, but doesn't create any parent-child relationship. Parents and Kids are equal under this rule, and they are just 
+				  contours i.e. belonging to same hierarchy level.
+	- RETR_EXTERNAL : It returns only th extreme outer contours. All child contours are left behind.
+	- RETR_CCOMP : It retrieves all the contours and arranges them to a 2-level hierarchy i.e. external contours of the object is placed in hierarchy-1 and those
+				   inside are placed in hierarchy-2.
+	- RETR_TREE : It retrieves all the contours and creates a full family hierarchy list. It even tells the relation.
+
+ex. contours_detection.py
+
+		#!/usr/bin/env python
+		import numpy as np
+		import cv2
+
+		def read_rgb_image(image_name, show):
+			rgb_image = cv2.imread(image_name)
+			if show:
+				cv2.imshow("RGB Image", rgb_image)
+			return rgb_image
+
+		def convert_rgb_to_gray(rbg_image, show):
+			gray_image = cv2.cvtColor(rbg_image, cv2.COLOR_BGR2GRAY)
+			if show:
+				cv2.imshow("GrayImage", gray_image)
+			return gray_image
+
+		def convert_gray_to_binary(gray_image, adaptive, show):
+			if adaptive:
+				binary_image = cv2.adaptiveThreshold(gray_image,
+													255,
+													cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+													cv2.THRESH_BINARY,
+													5, 2)
+			else:
+				_, binary_image = cv2.threshold(gray_image, 127, 255, cv2.THRESH_BINARY)
+
+			if show:
+				cv2.imshow("Binary Image", binary_image)
+			return binary_image
+
+		def getContours(binary_image):
+			_, contours, hierarchy = cv2.findContours(binary_image,
+													 cv2.RETR_TREE,
+													 cv2.CHAIN_APPROX_SIMPLE)
+			return contours
+
+		##--- inorder to do some processing on contours like, finding area of contours, drawing a particular contour
+		def process_contours(binary_image, rgb_image, contours):
+			black_image = np.zeros([binary_image.shape[0],binary_image.shape[1],3],)
+			for c in contours:
+				area = cv2.contourArea(c)
+				perimeter = cv2.arcLength(c, True)
+				((x,y), radius) = cv2.minEnclosingCircle(c)
+				cv2.drawContours(rgb_image, [c], -1, (150,250,150), 1)
+				cv2.drawContours(black_image, [c], -1, (150,250,150), 1)
+				cx, cy = get_contour_center(c)
+				cv2.circle(rgb_image, (cx,cy), (int)(radius), (0,0,255), 1)
+				cv2.circle(black_image, (cx,cy), (int)(radius), (0,0,255), 1)
+				print("Area : {}, Perimeter : {}".format(area,perimeter))
+			print("number of contours : {}".format(len(contours)))
+			cv2.imshow("RGB Image Contours", rgb_image)
+			cv2.imshow("Black Image Contours", black_image)
+
+		def get_contour_center(contour):
+			M = cv2.moments(contour)
+			cx = -1
+			cy = -1
+			if (M['m00'] != 0):
+				cx = int(M['m10']/M['m00'])
+				cy = int(M['m01']/M['m00'])
+			return cx, cy
+
+		def draw_contours(image, contours, image_name):
+			index = -1
+			thickness = 2
+			color = (255, 0, 255)
+			cv2.drawContours(image, contours, index, color, thickness)
+			cv2.imshow(image_name, image)
+
+		def main():
+			image_name = "images/shapes.png"
+			rgb_image = read_rgb_image(image_name, True)
+			gray_image = convert_rgb_to_gray(rgb_image, True)
+			binary_image = convert_gray_to_binary(gray_image, True, True)
+			contours = getContours(binary_image)
+			#draw_contours(rgb_image, contours, "RGB Contours")
+			process_contours(binary_image, rgb_image, contours)
+
+			cv2.waitKey(0)
+			cv2.destroyAllWindows()
+
+		if __name__ == "__main__":
+			main()
 		
 
 

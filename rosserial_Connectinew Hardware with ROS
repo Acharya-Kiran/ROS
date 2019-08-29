@@ -1,0 +1,276 @@
+----------------------------------------------------------
+
+	rosserial
+
+----------------------------------------------------------
+
+ - When you want to connect a new Hardware or sensor or actuator which doesn't have drivers supported by ROS to ROS Ecosystem
+   we use `rosserial.
+ - `rosserial` is a protocol designed to establish communication between ROS and a new Hardware.
+
+ ex. Integration of micro-controllers and embedded systems (sensors, controllers) into ROS. 
+
+ - `rosserial` allows new electronic hardware to directly talk to ROS system.
+ - no need to develop custom drivers and communication protocol
+ - `rosserial` is a protocol for wrapping standard ROS serialized messages and multiplexes multiple topics and services over a
+   character device such as a serial port or network socket.
+
+ROSSERIAL Client Libraries :
+	- Different Client libraries were developed for getting ROS up and running on various systems.
+
+	* rosserial_client :
+			is a general Client side rosserial implementation. It is designed for microcontrollers and it can run on any
+			processor for which you have an ANSI C++ compiler and a serial port connection to a computer running ROS.
+			
+			ex.
+				- rosserial_arduino
+				- rosserial_embeddedlinux
+				- rosserial_windows
+				- rosserial_mbed
+				...
+
+ROS side Interfaces : these are nodes acting as servers in ROS machine, for rosserial_client to communicate with.
+					  making it a gateway between embedded system and ROS machine.
+	
+	- rosserial_python : A Python-based implementation (recommended for PC Usage) 
+
+	- rosserial_server : A C++ implementation, has some limitations compared to `rosserial_python` but recommended for high
+						 performance applications.
+
+		-------------------------------								rosserial_arduino
+		[             				  ]								--------------
+		[    rosserial_python /       ]                             [            ]
+		[    rosserial_server         ]			ROS messages        [   arduino  ]
+		[           ^                 ]<--------------------------> [            ]
+		[           [                 ]								--------------
+		[           [                 ]
+		[          ROS                ]
+		[                             ]
+		-------------------------------
+
+
+----------------------------------------------------------
+
+	ARDUINO
+
+----------------------------------------------------------
+
+- Its a open-source electronics platform.
+- easy to use hardware and software.
+- read an input (light sensor, fingerprint, ...) from analog and digital input ports
+- write output (activating motor, turn led on/off, ...)
+- use C for programming (Arduino IDE)
+- used in many applications : prototyping, IoT, Robotics, embedded systems, ...
+
+
+----------------------------------------------------------
+
+	ARDUINO UNO Board
+
+----------------------------------------------------------
+
+consist of following,
+
+	- Microcontroller : ATMEGA328P 8 bit AVR
+	- Fash Memory : 32 Kbytes (0.5 KB is used for bootloader)
+	- Operating Voltage : 1.8 - 5.0 V
+	- Recommended Input Voltage : 7 - 12 V
+	- Analog Input Pins : 6 (A0 - A5)
+	- Digital I/O Pins : 14 (Out of which 6 provide PWM( Pulse Width Modulation ) output)
+
+	** PWM stands for Pulse Width Modulation technique , It is used to convert the digital signal into an analog by varying 
+	   the width of the Pulse . The PWM pins are used for giving the desired analog output .They are used to set the LED 
+	   brightness or to run Stepper or Servo Motor or anything which require analog inputs .
+
+// Arduino Base Shield is a board on top of Arduino containing only I/O ports and some buttons making it easy to connect 
+   sensors to Arduino.
+
+
+----------------------------------------------------------
+
+	ARDUINO IDE
+
+----------------------------------------------------------
+
+ex. of temperature sensor. 3 pins utilised, (5V, Gnd, Analog pin)
+
+	int sensorPin = 0; // A0
+
+	//-----** setup() is run only once when the program starts.
+
+	void setup()   // method used to initialize the parameters of the connection
+	{
+
+		Serial.begin(9600);	        //start serial connection with the computer
+				//--baud rate--		//to view open the serial monitor
+
+			//---------------****
+					baud rate specifies the speed of the data that will be exchanged through the USB port between the 
+					Arduino board and the computer			
+			//---------------****
+
+
+	}
+
+	void loop()		//-----** this method is going to run forever
+	{
+		// getting the voltage reading from the sensor
+		int reading = analogRead(sensorPin);
+
+		//converting the reading to voltage
+		float voltage = reading * 5.0;  // should be mutiplied by 3.3 incase of sensor using 3.3V
+		voltage /= 1024.0;
+
+		//print out the voltage
+		Serial.print(voltage);
+
+		float temperatureC = (voltage - 0.5) * 100;
+
+		delay(1000);	//waiting a second
+
+	}
+
+
+----------------------------------------------------------
+
+	ARDUINO IDE Installation
+
+----------------------------------------------------------
+
+- Download the latest Arduino IDE from "https://www.arduino.cc/en/Main/Software"
+- Extract and keep the file in the home folder.
+- to open the IDE, run the executable.
+	$ ./arduino
+
+- Arduino programs have `.ino` as an extension
+
+ex. Ultrasonic Sensor
+	// estimated_distance = Round_trip_time / 2 * speed_of_sound (340 m/s)
+
+	const int pingPin = 7;
+
+	void setup(){
+
+		Serial.begin(9600);
+
+	}
+
+	void loop(){
+
+		long duration, inches, cm;
+
+		pinMode(pingPin, OUTPUT)
+
+		digitalWrite(pingPin, LOW);
+		delayMicroseconds(2);
+		digitalWrite(pingPin, HIGH);
+		delayMicroseconds(5);
+		digitalWrite(pingPin, LOW);
+
+		pinMode(pingPin, INPUT)
+
+		duration = pulseIn(pingPin, HIGH)	// listen the echo signal back and calculates the Round_trip_time
+		inches = microsecondsToInches(duration);
+		cm = microsecondsToCentimeters(duration);
+
+		Serial.print(inches);
+		Serial.print("in, ");
+		Serial.print(cm);
+		Serial.print("cm");
+		Serial.println();
+
+	}
+
+	long microsecondsToInches(long microseconds){
+		//there are 73.746 microseconds per inch as sound travels at 1130 ft per second
+		return microseconds/74/2;
+
+	}
+
+	long microsecondsToCentimeters(long microseconds){
+		// speed o sound is 340 m/s or 29 microseconds per centimeter
+		return microseconds/29/2;
+
+	}
+
+
+----------------------------------------------------------
+
+	Install rosserial libraries
+
+----------------------------------------------------------
+
+	$ sudo apt-get install ros-kinetic-rosserial-arduino
+
+	// after that we have a create a ros library under the `libraries` folder of arduino
+	$ cd libraries/
+
+	// remove if existing
+	$ rm -rf ros_lib 
+
+	// run roscore in seperate terminal
+	$ roscore
+
+	// run this inside the libraries folder
+	$ rosrun rosserial_arduino make_libraries.py .     // . indicates the location or path
+
+	//---* It will create a `ros_lib` folder that represents the whole ROS ecosystem adapted for arduino platform
+
+ex. hello world --- ROS Publisher in Arduino
+
+	#include <ros.h>
+	#include <std_msgs/String.h>
+
+	ros::NodeHandle nh;
+
+	std_msgs::String str_msg;
+	ros::Publisher chatter("chatter", &str_msg);
+
+	char hello[13] = "hello world!";
+
+	void setup(){
+		nh.initNode();
+		nh.advertise(chatter);
+	}
+
+	void loop(){
+		str_msg.data = hello;
+		chatter.publish(&str_msg);
+		nh.spinOnce();
+		delay(1000);
+	}
+
+	// after writing the program you need to `upload` it. i.e. like setting up the `rosserial_arduino` client.
+
+	//-----*** now we need to start the server in the host i.e. `rosserial_python`.
+
+	$ rosrun rosserial_python serial_node.py /dev/ttyACM0
+										   --- port number ---
+
+ex.  ROS Subscriber in Arduino // blink the led
+
+	#include <ros.h>
+	#include <std_msgs/Empty.h>
+
+	ros::NodeHandle nh;
+
+	void messageCb( const std_msgs::Empty &toggle_msg){
+		digitalWrite(13, HIGH-digitalRead(13));
+	}
+
+	ros::Subscriber<std_msgs::Empty> sub("toggle_led", &messageCb);
+
+	void setup(){
+		pinMode(13, OUTPUT);
+		nh.initNode();
+		nh.subscribe(sub);
+	}
+
+	void loop(){
+		nh.spinOnce();
+		delay(1);	
+	}
+
+	// upload it
+	$ rosrun rosserial_python serial_node.py /dev/ttyACM0
+	$ rostopic pub toggle_led std_msgs/Empty --once   // to publish a message manually from host
